@@ -1,133 +1,94 @@
-# Projeto de Indexação e Busca de Boletins
+# ETL de Boletins da UNIRIO com Elasticsearch
 
-Este projeto é uma aplicação que baixa boletins em formato PDF de uma página da UNIRIO, extrai o texto dos PDFs, indexa o conteúdo em Elasticsearch e realiza buscas utilizando consultas complexas. Além disso, inclui instruções para visualizar os dados usando Kibana.
+Este projeto realiza a indexação de arquivos PDF e permite a busca através dos conteúdos desses arquivos usando Elasticsearch. Além disso, os resultados das buscas são salvos em arquivos de texto.
 
-## Pré-requisitos
+## Requisitos
 
-- [Python 3.x](https://www.python.org/downloads/)
-- [Docker](https://www.docker.com/products/docker-desktop)
-- [Docker Compose](https://docs.docker.com/compose/install/)
+- **Python 3.6+**
+- **Elasticsearch** (versão 7.10.1)
+- **Kibana** (versão 7.10.1)
+- **Docker** (para rodar Elasticsearch e Kibana em containers)
 
-## Estrutura do Projeto
+## Configuração do Ambiente
 
-- `download_pdfs.py`: Script para baixar PDFs das páginas da UNIRIO.
-- `main.py`: Script para processar e indexar os PDFs no Elasticsearch e realizar buscas.
-- `requirements.txt`: Lista de dependências do Python.
+### 1. Configuração com Docker
 
-## Instalação
+Para simplificar a configuração, o Docker foi utilizado para rodar o Elasticsearch e Kibana. 
 
-### 1. Clonar o Repositório
+1. **Instale o Docker** se ainda não estiver instalado.
 
-Clone o repositório para o seu ambiente local:
+2. **Inicie Elasticsearch e Kibana usando Docker:**
 
-```bash
-git clone https://github.com/seu-usuario/seu-repositorio.git
-cd seu-repositorio
-```
+    ```bash
+    docker run -d --name elasticsearch -p 9200:9200 -e "discovery.type=single-node" elasticsearch:7.10.1
+    docker run -d --name kibana -p 5601:5601 --link elasticsearch:elasticsearch kibana:7.10.1
+    ```
 
-### 2. Instalar Dependências
+3. **Acesse os serviços:**
 
-Crie e ative um ambiente virtual (opcional, mas recomendado) e instale as dependências:
+    - Elasticsearch: `http://localhost:9200`
+    - Kibana: `http://localhost:5601`
 
-```bash
-python -m venv venv
-source venv/bin/activate  # No Windows use `venv\Scripts\activate`
-pip install -r requirements.txt
-```
+### 2. Instalação das Dependências
 
-## Executando o Projeto
+1. **Crie e ative um ambiente virtual:**
 
-### 1. Configurar Elasticsearch e Kibana com Docker
+    ```bash
+    python -m venv venv
+    source venv/bin/activate  # Para Linux/Mac
+    venv\Scripts\activate  # Para Windows
+    ```
 
-Crie um arquivo `docker-compose.yml` com o seguinte conteúdo:
+2. **Instale as dependências necessárias:**
 
-```yaml
-version: '3.8'
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-services:
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.6.3
-    container_name: elasticsearch
-    environment:
-      - discovery.type=single-node
-      - ELASTIC_PASSWORD=changeme
-    ports:
-      - "9200:9200"
-    networks:
-      - es-net
+### 3. Processamento e Indexação dos PDFs
 
-  kibana:
-    image: docker.elastic.co/kibana/kibana:8.6.3
-    container_name: kibana
-    environment:
-      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-      - ELASTICSEARCH_USERNAME=elastic
-      - ELASTICSEARCH_PASSWORD=changeme
-    ports:
-      - "5601:5601"
-    networks:
-      - es-net
+1. **Baixar os PDFs:**
 
-networks:
-  es-net:
-    driver: bridge
-```
+    Execute o script `download_pdfs.py` para baixar os PDFs da UNIRIO e salvá-los na pasta `boletins`:
 
-Inicie os containers do Elasticsearch e Kibana:
+    ```bash
+    python download_pdfs.py
+    ```
 
-```bash
-docker-compose up -d
-```
+2. **Indexar o conteúdo dos PDFs no Elasticsearch:**
 
-### 2. Baixar os PDFs
+    Execute o script `index_documents.py` para extrair o texto dos PDFs e indexá-los:
 
-Execute o script `download_pdfs.py` para baixar os PDFs da página da UNIRIO:
+    ```bash
+    python index_documents.py
+    ```
 
-```bash
-python download_pdfs.py
-```
+3. **Realizar buscas:**
 
-### 3. Processar e Indexar os PDFs
+    Execute o script `main.py` para realizar buscas e salvar os resultados:
 
-Depois de baixar os PDFs, execute o script `main.py` para extrair o texto, indexar os documentos no Elasticsearch e realizar as buscas:
+    ```bash
+    python main.py
+    ```
 
-```bash
-python main.py
-```
+    O script gera arquivos de texto na pasta `resultados` com os detalhes das buscas realizadas.
 
-## Visualizando Dados com Kibana
+### 4. Visualização dos Resultados no Kibana
 
-1. Abra o Kibana no navegador: [http://localhost:5601](http://localhost:5601).
+1. **Acesse o Kibana em** `http://localhost:5601`.
 
-2. Configure o índice no Kibana:
-   - Vá para `Stack Management` > `Kibana` > `Index Patterns`.
-   - Clique em `Create index pattern`.
-   - Defina o padrão do índice como `boletins` e clique em `Next step`.
-   - Selecione um campo de data (opcional) e clique em `Create index pattern`.
+2. **Explore os dados:**
 
-3. Realize buscas e visualize os dados:
-   - Vá para `Discover` para visualizar os dados indexados.
-   - Use `Visualize` e `Dashboard` para criar visualizações e dashboards com os dados indexados.
+    - Vá para a aba **"Discover"** para visualizar e explorar os dados indexados.
+    - Criar **visualizações**/**dashboards** para analise de dados.
 
-## Arquivo `requirements.txt`
+### Alterações no Código
 
-Certifique-se de que o arquivo `requirements.txt` contém as seguintes dependências:
+- **Para modificar as buscas em `main.py`:** Edite a lista `queries` com novas consultas. Cada consulta deve ter uma `description` e um `query`. Ajuste o formato das consultas conforme necessário para suas buscas específicas.
 
-```
-requests
-beautifulsoup4
-pypdf2
-elasticsearch
-```
+### Estrutura dos Diretórios
 
-## Notas
+- **`boletins/`**: Pasta onde os PDFs são armazenados.
+- **`resultados/`**: Pasta onde os resultados das buscas são salvos em arquivos de texto.
 
-- O Elasticsearch e o Kibana estão configurados para rodar em modo de nó único para desenvolvimento. Para ambientes de produção, considere configurações de cluster.
-- Os scripts assumem que a estrutura dos diretórios para PDFs será organizada com base nos anos ou diretórios similares.
-
-## Contribuições
-
-Sinta-se à vontade para contribuir com o projeto. Envie pull requests ou abra issues para sugestões e melhorias.
-
----
 

@@ -4,12 +4,14 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 
 # Função para baixar um arquivo PDF
-def download_pdf(pdf_url, folder):
+def download_pdf(pdf_url, folder, year):
     try:
+        # Extraindo o nome do arquivo PDF a partir da URL e adicionando o ano ao nome
         pdf_name = pdf_url.split("/")[-1]
-        pdf_path = os.path.join(folder, pdf_name)
+        pdf_name_with_year = f"{year}_{pdf_name}"
+        pdf_path = os.path.join(folder, pdf_name_with_year)
 
-        print(f"Baixando {pdf_name} no diretório {pdf_path}...")
+        print(f"Baixando {pdf_name_with_year} no diretório {pdf_path}...")
         response = requests.get(pdf_url)
         response.raise_for_status()  # Verifica se houve erro na requisição
 
@@ -19,12 +21,12 @@ def download_pdf(pdf_url, folder):
         with open(pdf_path, 'wb') as file:
             file.write(response.content)
 
-        print(f"PDF {pdf_name} baixado com sucesso!")
+        print(f"PDF {pdf_name_with_year} baixado com sucesso!")
     except Exception as e:
         print(f"Erro ao baixar {pdf_url}: {str(e)}")
 
 # Função para buscar os links de PDF em uma página
-def get_pdfs_from_page(url, folder):
+def get_pdfs_from_page(url, folder, year):
     try:
         print(f"Processando a página de PDFs: {url}")
         response = requests.get(url)
@@ -32,17 +34,11 @@ def get_pdfs_from_page(url, folder):
 
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        # Debug: Printar o HTML da página para verificar o conteúdo
-        print(soup.prettify())
-
         pdf_links = soup.find_all('a', href=lambda href: href and href.endswith('.pdf'))
-
-        if not os.path.exists(folder):
-            os.makedirs(folder)
 
         for link in pdf_links:
             pdf_url = urljoin(url, link['href'])
-            download_pdf(pdf_url, folder)
+            download_pdf(pdf_url, folder, year)
     except Exception as e:
         print(f"Erro ao processar a página {url}: {str(e)}")
 
@@ -55,25 +51,18 @@ def download_all_pdfs_from_unirio(base_url, folder):
 
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        # Debug: Printar o HTML da página principal para verificar o conteúdo
-        print(soup.prettify())
+        # Encontrar todos os links, independentemente da estrutura específica
+        links = soup.find_all('a', href=True)
 
-        # Atualizar o seletor para encontrar os links de ano corretamente
-        year_links = soup.find_all('a', href=lambda href: href and '/boletins/' in href)
+        # Filtra apenas os links relevantes para ano/página
+        for link in links:
+            href = link['href']
+            year_url = urljoin(base_url, href)
 
-        # Debug: Verificar quais links foram encontrados
-        print(f"Links encontrados para ano: {[link['href'] for link in year_links]}")
-
-        for link in year_links:
-            year_url = urljoin(base_url, link['href'])
-            year_text = link['href'].split('/')[-1]
-
-            if year_text.isdigit() or '-' in year_text:
-                year_folder = os.path.join(folder, year_text)
-                print(f"\nProcessando ano/página: {year_text}")
-                get_pdfs_from_page(year_url, year_folder)
-            else:
-                print(f"Ignorando link não relacionado a ano: {year_url}")
+            if '/boletins/' in href:
+                year_text = href.split('/')[-1]
+                print(f"\nProcessando página: {year_url} para o ano: {year_text}")
+                get_pdfs_from_page(year_url, folder, year_text)
     except Exception as e:
         print(f"Erro ao processar a página principal {base_url}: {str(e)}")
 

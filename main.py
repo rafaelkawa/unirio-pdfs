@@ -2,12 +2,12 @@ import os
 from PyPDF2 import PdfReader
 from elasticsearch import Elasticsearch
 
-# Função para extrair texto de um PDF
+# Extrair o texto do pdf
 def extract_text_from_pdf(pdf_path):
     try:
         print(f"Extraindo texto de {pdf_path}...")
         reader = PdfReader(pdf_path)
-        num_pages = len(reader.pages)  # Usa len(reader.pages) para obter o número de páginas
+        num_pages = len(reader.pages)
         text = ""
         for page_num in range(num_pages):
             text += reader.pages[page_num].extract_text()
@@ -17,7 +17,7 @@ def extract_text_from_pdf(pdf_path):
         print(f"Erro ao processar {pdf_path}: {str(e)}")
         return None
 
-# Função para indexar o texto no Elasticsearch
+# Indexar o texto no Elasticsearch
 def index_text(es, index_name, text, doc_id):
     try:
         print(f"Indexando documento {doc_id}...")
@@ -26,44 +26,49 @@ def index_text(es, index_name, text, doc_id):
     except Exception as e:
         print(f"Erro ao indexar documento {doc_id}: {str(e)}")
 
-# Função para buscar no Elasticsearch
+# Buscar no Elasticsearch e salvar resultados em arquivos de texto
 def search_in_elasticsearch(es, index_name, query, description):
     try:
         print(f"Buscando: {description}")
         res = es.search(index=index_name, body={"query": query})
-        
+
+        result_text = f"Resultados para '{description}':\n"
+
         if 'hits' in res and res["hits"]["total"]["value"] > 0:
-            print(f"Resultados encontrados para '{description}':")
+            doc_ids = set()
             for hit in res["hits"]["hits"]:
-                print(f"Documento encontrado: {hit['_id']} | Conteúdo: {hit['_source']['content'][:200]}...\n")
-                save_search_result(description, hit['_source']['content'], hit['_id'])
+                doc_ids.add(hit['_id'])
+                result_text += f"Documento encontrado: {hit['_id']} | Conteúdo: {hit['_source']['content'][:200]}...\n"
+            result_text += f"\nTermo '{description}' encontrado em {len(doc_ids)} arquivos distintos.\n"
         elif 'aggregations' in res:
-            print(f"Resultados de agregação encontrados para '{description}':")
+            result_text += f"Resultados de agregação encontrados para '{description}':\n"
             agg_results = res["aggregations"]["common_words"]["buckets"]
             for bucket in agg_results:
-                print(f"Palavra: {bucket['key']}, Contagem: {bucket['doc_count']}")
+                result_text += f"Palavra: {bucket['key']}, Contagem: {bucket['doc_count']}\n"
         else:
-            print(f"Nenhum resultado encontrado para '{description}'.")
+            result_text += f"Nenhum resultado encontrado para '{description}'.\n"
+
+        # Salvar resultado em arquivo de texto
+        save_search_result(description, result_text)
     except Exception as e:
         print(f"Erro ao buscar '{description}': {str(e)}")
 
-# Função para salvar o resultado da busca em um arquivo de texto
-def save_search_result(query, content, doc_id):
-    directory = './resultados'  # Define a pasta 'resultados'
-    if not os.path.exists(directory):  # Verifica se a pasta já existe
-        os.makedirs(directory)  # Cria a pasta se não existir
+# Salvar o resultado da busca em um arquivo de texto
+def save_search_result(query, result_text):
+    directory = './resultados'
+    if not os.path.exists(directory):
+        os.makedirs(directory)
     
-    file_name = f"{directory}/resultado_{doc_id}_{query}.txt"  # Define o caminho completo
+    file_name = f"{directory}/resultado_{query}.txt"
     with open(file_name, 'w', encoding='utf-8') as file:
         print(f"Salvando resultado da busca por '{query}' no arquivo {file_name}...")
-        file.write(content)
+        file.write(result_text)
     print(f"Resultado salvo com sucesso em {file_name}.")
 
 # Configuração do Elasticsearch
 es = Elasticsearch([{"host": "localhost", "port": 9200}])
 index_name = "boletins"
 
-# Verifica se o índice já existe, e se não, cria um
 if not es.indices.exists(index=index_name):
     print(f"Criando índice '{index_name}'...")
     es.indices.create(
@@ -78,7 +83,6 @@ if not es.indices.exists(index=index_name):
     )
     print(f"Índice '{index_name}' criado com sucesso.")
 
-# Diretório onde os PDFs estão localizados
 pdf_directory = './boletins'
 
 # Processa e indexa cada PDF
