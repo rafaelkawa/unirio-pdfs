@@ -52,7 +52,7 @@ for filename in os.listdir(pdf_directory):
         pdf_path = os.path.join(pdf_directory, filename)
         text = extract_text_from_pdf(pdf_path)
         if text:
-            doc_id = filename.split(".")[0]  # Usa o nome do arquivo como ID do documento
+            doc_id = filename.split(".")[0]  
             index_text(es, index_name, text, doc_id)
         else:
             print(f"Falha ao extrair texto de {pdf_path}")

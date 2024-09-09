@@ -48,12 +48,11 @@ def search_in_elasticsearch(es, index_name, query, description):
         else:
             result_text += f"Nenhum resultado encontrado para '{description}'.\n"
 
-        # Salvar resultado em arquivo de texto
         save_search_result(description, result_text)
     except Exception as e:
         print(f"Erro ao buscar '{description}': {str(e)}")
 
-# Salvar o resultado da busca em um arquivo de texto
+
 def save_search_result(query, result_text):
     directory = './resultados'
     if not os.path.exists(directory):
@@ -91,12 +90,12 @@ for filename in os.listdir(pdf_directory):
         pdf_path = os.path.join(pdf_directory, filename)
         text = extract_text_from_pdf(pdf_path)
         if text:
-            doc_id = filename.split(".")[0]  # Usa o nome do arquivo como ID do documento
+            doc_id = filename.split(".")[0]  
             index_text(es, index_name, text, doc_id)
         else:
             print(f"Falha ao extrair texto de {pdf_path}")
 
-# Lista de queries mais complexas
+# Lista de queries a serem alteradas para busca
 queries = [
     {
         "description": "Busca por termo 'Computação'",
