@@ -1,0 +1,5 @@
+elasticsearch
+requests
+beautifulsoup4
+pandas
+PyPDF2
