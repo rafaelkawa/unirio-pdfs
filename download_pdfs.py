@@ -6,7 +6,6 @@ from urllib.parse import urljoin
 # Função para baixar o PDF
 def download_pdf(pdf_url, folder, year):
     try:
-        # Extração do nome do arquivo PDF a partir da URL e adicionando o ano ao nome
         pdf_name = pdf_url.split("/")[-1]
         pdf_name_with_year = f"{year}_{pdf_name}"
         pdf_path = os.path.join(folder, pdf_name_with_year)
@@ -65,7 +64,7 @@ def download_all_pdfs_from_unirio(base_url, folder):
 
 base_url = 'https://www.unirio.br/boletins'
 
-# Diretório onde os PDFs serão salvos
+# pasta onde os PDFs serão salvos
 download_folder = './boletins'
 
 # Baixa todos os PDFs
