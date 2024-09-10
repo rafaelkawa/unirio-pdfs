@@ -1,25 +1,41 @@
 import os
 from elasticsearch import Elasticsearch
 
-# buscar no Elasticsearch e formatar os resultados 
+# buscar no Elasticsearch e contar todas as ocorrências
 def search_in_elasticsearch(es, index_name, query, description):
     try:
         print(f"Buscando: {description}")
-        res = es.search(index=index_name, body={"query": query}, size=1000)  
+        
 
+        res = es.search(index=index_name, body={
+            "query": query,
+            "highlight": {
+                "fields": {
+                    "content": {}
+                }
+            }
+        }, size=1000) 
+
+        total_hits = res["hits"]["total"]["value"]  
+        total_occurrences = 0  
         result_text = f"Resultados para '{description}':\n\n"
 
-        if 'hits' in res and res["hits"]["total"]["value"] > 0:
-            doc_ids = set()  
+        if total_hits > 0:
+            doc_ids = set()
             for hit in res["hits"]["hits"]:
                 doc_id = hit['_source']['doc_id']
                 page_num = hit['_source']['page']
-                content = hit['_source']['content'].replace("\n", " ").strip() 
                 doc_ids.add(doc_id)
-                
-                result_text += f"Documento: {doc_id} | Página: {page_num}\nConteúdo: {content[:300]}...\n\n" #caracteres exibidos
-            
-            result_text += f"\nTermo '{description}' encontrado em {len(doc_ids)} arquivos distintos.\n"
+
+                if "highlight" in hit and "content" in hit["highlight"]:
+                    occurrences = hit["highlight"]["content"]
+                    num_occurrences = len(occurrences)
+                    total_occurrences += num_occurrences  # Soma ao total de ocorrências
+
+                    for occ in occurrences:
+                        result_text += f"Documento: {doc_id} | Página: {page_num}\nOcorrência: {occ}\n\n"
+
+            result_text += f"\nTermo '{description}' encontrado em {total_occurrences} ocorrência(s) no total, em {len(doc_ids)} arquivos distintos.\n"
         else:
             result_text += f"Nenhum resultado encontrado para '{description}'.\n"
 
@@ -53,8 +69,6 @@ queries = [
                     {"match": {"content": "José Ricardo Cereja"}}  
                 ],
                 "should": [
-                    {"match": {"content": "portaria"}},
-                    {"match": {"content": "homologação"}},
                     {"match": {"content": "estágio"}},
                     {"match": {"content": "probatório"}}
                 ],
@@ -64,7 +78,7 @@ queries = [
     }
 ]
 
-# Realiza as consultas e salva os resultados
+# realiza as consultas e salva os resultados
 for query_info in queries:
     search_in_elasticsearch(es, index_name, query_info["query"], query_info["description"])
 
