@@ -3,7 +3,6 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 
-# Função para baixar o PDF
 def download_pdf(pdf_url, folder, year):
     try:
         pdf_name = pdf_url.split("/")[-1]

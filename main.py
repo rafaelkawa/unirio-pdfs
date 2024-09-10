@@ -1,7 +1,7 @@
 import os
 from elasticsearch import Elasticsearch
 
-# buscar no Elasticsearch e formatar os resultados de forma clara
+# buscar no Elasticsearch e formatar os resultados 
 def search_in_elasticsearch(es, index_name, query, description):
     try:
         print(f"Buscando: {description}")
